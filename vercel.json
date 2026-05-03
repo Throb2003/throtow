@@ -1,0 +1,11 @@
+{
+  "outputDirectory": "app/dist",
+  "installCommand": "npm ci --include=dev --prefix app",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
