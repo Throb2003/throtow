@@ -1028,7 +1028,7 @@ export const completeJob = async (jobId: string, finalPrice?: number): Promise<v
     .from("service_requests")
     .update({
       status: "completed",
-      payment_status: "unpaid",
+      payment_status: "pending",
       price: price,
       completed_at: now,
       updated_at: now,

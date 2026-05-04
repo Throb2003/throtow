@@ -151,6 +151,13 @@ CREATE POLICY "Customers can update own pending requests" ON service_requests
     customer_id = auth.uid() AND status = 'pending'
   );
 
+-- Providers can update assigned requests
+DROP POLICY IF EXISTS "Providers can update assigned requests" ON service_requests;
+CREATE POLICY "Providers can update assigned requests" ON service_requests
+  FOR UPDATE USING (
+    driver_id = auth.uid() OR mechanic_id = auth.uid() OR provider_id = auth.uid()
+  );
+
 -- Providers can view available and assigned requests
 DROP POLICY IF EXISTS "Providers can view requests" ON service_requests;
 CREATE POLICY "Providers can view requests" ON service_requests
