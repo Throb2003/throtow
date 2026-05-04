@@ -66,6 +66,8 @@ function AppRoutes() {
     <Routes>
       {/* ── Public Routes ── */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LandingPage />} />
+      <Route path="/register" element={<LandingPage />} />
 
       {/* ✅ NEW — Separate admin login page, not linked from anywhere */}
       <Route path="/admin/login" element={<AdminLoginPage />} />

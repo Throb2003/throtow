@@ -1,6 +1,6 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Car, ShieldCheck, Wrench } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,9 +62,10 @@ const getDashboardPath = (role?: string) => {
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, register, isAuthenticated, user } = useAuth();
 
-  const [activePanel, setActivePanel] = useState<'login' | 'register'>('login');
+  const [activePanel, setActivePanel] = useState<'login' | 'register'>(() => (location.pathname === '/register' ? 'register' : 'login'));
   const [loginRole, setLoginRole] = useState<RoleOption>('customer');
   const [registerRole, setRegisterRole] = useState<RoleOption>('customer');
 
@@ -86,11 +87,32 @@ export function LandingPage() {
     null,
   );
 
+  const authCardRef = useRef<HTMLDivElement | null>(null);
+  const didMountRef = useRef(false);
+
   useEffect(() => {
     if (isAuthenticated) {
       navigate(getDashboardPath(user?.role), { replace: true });
     }
   }, [isAuthenticated, navigate, user?.role]);
+
+  useEffect(() => {
+    if (location.pathname === '/register') {
+      setActivePanel('register');
+    } else if (location.pathname === '/login') {
+      setActivePanel('login');
+    }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    // Scroll only after initial mount (prevents awkward page jump on first load)
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+
+    authCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [activePanel]);
 
   const activeRoleCopy = useMemo(
     () => roleOptions.find((option) => option.value === (activePanel === 'login' ? loginRole : registerRole)),
@@ -185,7 +207,11 @@ export function LandingPage() {
           <Button
             variant="outline"
             className="border-white/15 bg-white/5 text-slate-100 hover:bg-white/10"
-            onClick={() => setActivePanel((current) => (current === 'login' ? 'register' : 'login'))}
+            onClick={() => {
+              const nextPanel = activePanel === 'login' ? 'register' : 'login';
+              setActivePanel(nextPanel);
+              navigate(nextPanel === 'register' ? '/register' : '/login', { replace: false });
+            }}
           >
             {activePanel === 'login' ? 'Create account' : 'Sign in'}
           </Button>
@@ -203,7 +229,7 @@ export function LandingPage() {
                 </h2>
                 <p className="max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
                   Use your secure account to request service, track response progress, and handle
-                  payments without relying on demo credentials or placeholder workflows.
+                  payments with M-Pesa prompts on your phone—built for real roadside dispatch.
                 </p>
               </div>
             </div>
@@ -230,15 +256,46 @@ export function LandingPage() {
                 );
               })}
             </div>
+
+            <div className="mt-10 rounded-2xl border border-white/10 bg-slate-900/40 p-5 backdrop-blur">
+              <div className="flex items-start gap-3">
+                <div className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-white">Built for real roadside emergencies</p>
+                  <ul className="space-y-2 text-sm text-slate-300">
+                    <li className="flex gap-2">
+                      <span className="text-emerald-300">•</span>
+                      <span>Complete payments using M-Pesa prompts on your phone.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-emerald-300">•</span>
+                      <span>Stay reachable on your registered phone number.</span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="text-emerald-300">•</span>
+                      <span>For urgent help, submit a detailed request with your map location for faster dispatch.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           </section>
 
           <section>
-            <Card className="border-white/10 bg-slate-900/80 text-slate-50 shadow-2xl shadow-slate-950/40 backdrop-blur">
+            <Card
+              ref={authCardRef}
+              className="border-white/10 bg-slate-900/80 text-slate-50 shadow-2xl shadow-slate-950/40 backdrop-blur"
+            >
               <CardHeader className="space-y-4">
                 <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
                   <button
                     type="button"
-                    onClick={() => setActivePanel('login')}
+                    onClick={() => {
+                      setActivePanel('login');
+                      navigate('/login', { replace: false });
+                    }}
                     className={`rounded-full px-4 py-2 text-sm transition ${
                       activePanel === 'login'
                         ? 'bg-sky-500 text-white'
@@ -249,7 +306,10 @@ export function LandingPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActivePanel('register')}
+                    onClick={() => {
+                      setActivePanel('register');
+                      navigate('/register', { replace: false });
+                    }}
                     className={`rounded-full px-4 py-2 text-sm transition ${
                       activePanel === 'register'
                         ? 'bg-sky-500 text-white'
@@ -318,6 +378,7 @@ export function LandingPage() {
                         id="login-email"
                         type="email"
                         placeholder="name@example.com"
+                        autoComplete="email"
                         value={loginForm.email}
                         onChange={(event) =>
                           setLoginForm((current) => ({ ...current, email: event.target.value }))
@@ -332,6 +393,7 @@ export function LandingPage() {
                         id="login-password"
                         type="password"
                         placeholder="Enter your password"
+                        autoComplete="current-password"
                         value={loginForm.password}
                         onChange={(event) =>
                           setLoginForm((current) => ({ ...current, password: event.target.value }))
@@ -356,6 +418,7 @@ export function LandingPage() {
                       <Input
                         id="register-name"
                         placeholder="Enter your full name"
+                        autoComplete="name"
                         value={registerForm.name}
                         onChange={(event) =>
                           setRegisterForm((current) => ({ ...current, name: event.target.value }))
@@ -371,6 +434,7 @@ export function LandingPage() {
                           id="register-email"
                           type="email"
                           placeholder="name@example.com"
+                          autoComplete="email"
                           value={registerForm.email}
                           onChange={(event) =>
                             setRegisterForm((current) => ({
@@ -388,6 +452,7 @@ export function LandingPage() {
                           id="register-phone"
                           type="tel"
                           placeholder="+2547..."
+                          autoComplete="tel"
                           value={registerForm.phone}
                           onChange={(event) =>
                             setRegisterForm((current) => ({
@@ -407,6 +472,7 @@ export function LandingPage() {
                           id="register-password"
                           type="password"
                           placeholder="Create a secure password"
+                          autoComplete="new-password"
                           value={registerForm.password}
                           onChange={(event) =>
                             setRegisterForm((current) => ({
@@ -424,6 +490,7 @@ export function LandingPage() {
                           id="register-confirm-password"
                           type="password"
                           placeholder="Repeat your password"
+                          autoComplete="new-password"
                           value={registerForm.confirmPassword}
                           onChange={(event) =>
                             setRegisterForm((current) => ({
@@ -454,4 +521,4 @@ export function LandingPage() {
     </div>
   );
 }
-export default LandingPage; 
+export default LandingPage;
