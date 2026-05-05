@@ -277,7 +277,7 @@ const mapServiceRequestRow = (row: unknown): ServiceRequest => {
 const mapJobRow = (row: unknown): Job => {
   const request = mapServiceRequestRow(row);
   const record = isRecord(row) ? row : {};
-
+ 
   return {
     id: request.id,
     requestId: request.id,
@@ -291,8 +291,6 @@ const mapJobRow = (row: unknown): Job => {
     customerName: request.customerName,
     customerPhone: request.customerPhone,
     serviceType: request.serviceType,
-    // ✅ Forward description so driver dialog shows service notes
-    description: asNullableString(record.description ?? record.notes) ?? null,
     vehicleInfo: asString(
       isRecord(request.vehicleInfo)
         ? `${request.vehicleInfo.make} ${request.vehicleInfo.model}`.trim()
@@ -332,7 +330,7 @@ const mapPaymentRow = (row: unknown): PaymentRecord => {
  
 const mapNotificationRow = (row: unknown): NotificationRecord => {
   const record = isRecord(row) ? row : {};
-
+ 
   return {
     id: asString(record.id),
     userId: asString(record.user_id ?? record.userId),
@@ -344,10 +342,10 @@ const mapNotificationRow = (row: unknown): NotificationRecord => {
     actionUrl: asNullableString(record.action_url ?? record.actionUrl) ?? null,
   } as NotificationRecord;
 };
-
+ 
 const mapRequestMessageRow = (row: unknown): RequestMessage => {
   const record = isRecord(row) ? row : {};
-
+ 
   return {
     id: asString(record.id),
     requestId: asString(record.request_id ?? record.requestId),
@@ -582,35 +580,10 @@ export const createCustomerRequest = async (
   const location = parseLocation(values.location);
   const destination = parseLocation(values.destination);
  
-  // Merge notes into description so drivers always see the full context
-  const baseDescription = asString(values.description ?? values.issueDescription ?? values.issue_description);
-  const extraNotes = asString(values.notes ?? values.additionalNotes ?? values.additional_notes);
-  const fullDescription = extraNotes
-    ? baseDescription
-      ? `${baseDescription}\n\nAdditional notes: ${extraNotes}`
-      : extraNotes
-    : baseDescription;
-
-  // Vehicle info — build a structured object from whatever the customer provided
-  const vehicleStr = asString(
-    values.vehicleDetails ?? values.vehicle_details ?? values.vehicleInfo ?? values.vehicle_info,
-  );
-  const vehicleInfo = vehicleStr
-    ? { make: vehicleStr, model: "", color: "", plate: null }
-    : null;
-
-  // Customer contact phone from the form
-  const customerPhone = asString(
-    values.contactPhone ?? values.customerPhone ?? values.phoneNumber ?? values.phone,
-  );
-
   const insertPayload = {
     customer_id: customerId,
     service_type: asString(values.serviceType ?? values.service_type, "General"),
-    description: fullDescription,
-    notes: extraNotes || null,
-    vehicle_info: vehicleInfo,
-    customer_phone: customerPhone || null,
+    description: asString(values.description),
     priority: asString(values.priority ?? values.urgency, "normal"),
     status: "pending",
     payment_status: "unpaid",
@@ -742,42 +715,42 @@ export const markNotificationRead = async (notificationId: string): Promise<void
       read_at: new Date().toISOString(),
     })
     .eq("id", notificationId);
-
+ 
   if (error) {
     throw new Error(`Unable to mark notification as read: ${error.message}`);
   }
 };
-
+ 
 export const listRequestMessages = async (requestId: string): Promise<RequestMessage[]> => {
   const { data, error } = await supabase
     .from("request_messages")
     .select("*")
     .eq("request_id", requestId)
     .order("created_at", { ascending: true });
-
+ 
   if (error) {
     throw new Error(`Unable to load chat messages: ${error.message}`);
   }
-
+ 
   return (data ?? []).map(mapRequestMessageRow);
 };
-
+ 
 export const sendRequestMessage = async (
   requestId: string,
   message: string,
 ): Promise<RequestMessage> => {
   const body = message.trim();
-
+ 
   if (!body) {
     throw new Error("Message cannot be empty.");
   }
-
+ 
   const profile = await getCurrentProfile();
-
+ 
   if (!profile) {
     throw new Error("You must be signed in to send a message.");
   }
-
+ 
   const { data, error } = await supabase
     .from("request_messages")
     .insert({
@@ -789,14 +762,14 @@ export const sendRequestMessage = async (
     })
     .select("*")
     .single();
-
+ 
   if (error) {
     throw new Error(`Unable to send chat message: ${error.message}`);
   }
-
+ 
   return mapRequestMessageRow(data);
 };
-
+ 
 export const getAdminAnalytics = async (): Promise<AnalyticsSummary> => {
   const [requestsResult, paymentsResult, usersResult] = await Promise.all([
     supabase.from("service_requests").select("*"),
@@ -1006,37 +979,34 @@ export const cancelJob = async (jobId: string): Promise<void> => {
 };
  
 export const completeJob = async (jobId: string, finalPrice?: number): Promise<void> => {
-  // Fetch full request details — customer, price, service type
+  // Step 1 — fetch job details
   const { data: request, error: fetchError } = await supabase
     .from("service_requests")
-    .select("customer_id, service_type, price, amount, estimated_price, driver_id, mechanic_id, provider_id")
+    .select("customer_id, service_type, price, amount, estimated_price, driver_id, mechanic_id, provider_id, assigned_to")
     .eq("id", jobId)
     .single();
-
+ 
   if (fetchError) throw new Error(`Unable to fetch job for completion: ${fetchError.message}`);
-
+ 
   const now = new Date().toISOString();
   const record = isRecord(request) ? request : {};
   const storedPrice = asNumber(record.price ?? record.amount ?? record.estimated_price, 0);
-  // Use the driver-calculated price if provided and stored is 0
   const price = finalPrice && finalPrice > 0 ? finalPrice : storedPrice;
-
-
-
-  // Mark the request as completed and save the final price
-  const { error } = await supabase
+ 
+  // Step 2 — mark as completed
+  const { error: updateError } = await supabase
     .from("service_requests")
     .update({
       status: "completed",
-      payment_status: "pending",
+      payment_status: "unpaid",
       price: price,
       completed_at: now,
       updated_at: now,
     })
     .eq("id", jobId);
-
-  if (error) throw new Error(`Unable to complete job: ${error.message}`);
-
+ 
+  if (updateError) throw new Error(`Unable to complete job: ${updateError.message}`);
+ 
   const customerId = asNullableString(record.customer_id);
   const serviceType = asString(record.service_type, "service");
   const priceFormatted = new Intl.NumberFormat("en-KE", {
@@ -1044,48 +1014,48 @@ export const completeJob = async (jobId: string, finalPrice?: number): Promise<v
     currency: "KES",
     maximumFractionDigits: 0,
   }).format(price);
-
-  // Notify the customer — prompt them to pay (like Uber/Bolt receipt)
+ 
+  const providerId = asNullableString(
+    record.driver_id ?? record.mechanic_id ?? record.provider_id ?? record.assigned_to,
+  );
+ 
+  // Step 3 — notify customer to pay
   if (customerId) {
     await supabase.from("notifications").insert({
       user_id: customerId,
       title: "Service complete — payment due",
       message: price > 0
-        ? `Your ${serviceType} service has been completed. Your total is ${priceFormatted}. Please proceed to payment in your dashboard.`
-        : `Your ${serviceType} service has been completed. Please proceed to the Payments section to settle your balance.`,
+        ? `Your ${serviceType} service is complete! Total: ${priceFormatted}. Please proceed to payment in your dashboard.`
+        : `Your ${serviceType} service is complete! Please go to the Payments section.`,
       type: "success",
       related_id: jobId,
     });
   }
-
-  // Notify the driver/mechanic that the job is done and shows their earnings
-  const providerId = asNullableString(
-    record.driver_id ?? record.mechanic_id ?? record.provider_id,
-  );
+ 
+  // Step 4 — notify driver their earnings
   if (providerId) {
     await supabase.from("notifications").insert({
       user_id: providerId,
       title: "Job marked complete",
       message: price > 0
-        ? `You have completed the ${serviceType} job. Your earnings of ${priceFormatted} will be reflected in your dashboard.`
-        : `You have completed the ${serviceType} job. Earnings will be updated once payment is confirmed.`,
+        ? `You completed the ${serviceType} job. Earnings of ${priceFormatted} will reflect once customer pays.`
+        : `You completed the ${serviceType} job. Earnings will update once payment is confirmed.`,
       type: "success",
       related_id: jobId,
     });
   }
 };
-
-
-// ─── Mark driver as arrived at customer location ──────────────────────────────
+ 
+ 
 export const markDriverArrived = async (jobId: string): Promise<void> => {
   const { data: request, error: fetchError } = await supabase
     .from("service_requests")
     .select("customer_id, service_type, driver_id, mechanic_id, provider_id")
     .eq("id", jobId)
     .single();
-
+ 
   if (fetchError) throw new Error(`Unable to fetch job: ${fetchError.message}`);
-
+ 
   const { error } = await supabase
     .from("service_requests")
     .update({
@@ -1094,13 +1064,13 @@ export const markDriverArrived = async (jobId: string): Promise<void> => {
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId);
-
+ 
   if (error) throw new Error(`Unable to mark arrived: ${error.message}`);
-
+ 
   const record = isRecord(request) ? request : {};
   const customerId = asNullableString(record.customer_id);
   const serviceType = asString(record.service_type, "service");
-
+ 
   // Notify the customer their driver/mechanic has arrived
   if (customerId) {
     await supabase.from("notifications").insert({
@@ -1112,7 +1082,7 @@ export const markDriverArrived = async (jobId: string): Promise<void> => {
     });
   }
 };
-
+ 
 // ─── Start the trip/service ───────────────────────────────────────────────────
 export const startTrip = async (jobId: string): Promise<void> => {
   const { data: request, error: fetchError } = await supabase
@@ -1120,9 +1090,9 @@ export const startTrip = async (jobId: string): Promise<void> => {
     .select("customer_id, service_type, driver_id, mechanic_id, provider_id")
     .eq("id", jobId)
     .single();
-
+ 
   if (fetchError) throw new Error(`Unable to fetch job: ${fetchError.message}`);
-
+ 
   const { error } = await supabase
     .from("service_requests")
     .update({
@@ -1131,13 +1101,13 @@ export const startTrip = async (jobId: string): Promise<void> => {
       updated_at: new Date().toISOString(),
     })
     .eq("id", jobId);
-
+ 
   if (error) throw new Error(`Unable to start trip: ${error.message}`);
-
+ 
   const record = isRecord(request) ? request : {};
   const customerId = asNullableString(record.customer_id);
   const serviceType = asString(record.service_type, "service");
-
+ 
   // Notify the customer their trip has started
   if (customerId) {
     await supabase.from("notifications").insert({
@@ -1149,7 +1119,7 @@ export const startTrip = async (jobId: string): Promise<void> => {
     });
   }
 };
-
+ 
 export const cancelCustomerRequest = async (requestId: string): Promise<void> => {
   // Get the driver info BEFORE cancelling so we can notify them
   const { data: request } = await supabase
@@ -1268,28 +1238,28 @@ export const getProviderStatus = async (): Promise<{
 } | null> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-
+ 
   const { data, error } = await supabase
     .from("profiles")
     .select("is_online, current_job_id")
     .eq("id", user.id)
     .maybeSingle();
-
+ 
   if (error || !data) return null;
-
+ 
  const record: Record<string, unknown> = isRecord(data) ? data : {};
-
+ 
   return {
     isOnline: asBoolean(record.is_online, false),
     isOnJob: Boolean(record.current_job_id),
     currentJobId: asNullableString(record.current_job_id) ?? null,
   };
 };
-
+ 
 export const setOnlineStatus = async (online: boolean): Promise<void> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-
+ 
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -1297,14 +1267,14 @@ export const setOnlineStatus = async (online: boolean): Promise<void> => {
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);
-
+ 
   if (error) throw new Error(`Unable to update online status: ${error.message}`);
 };
-
+ 
 export const updateProviderLocation = async (location: LocationPoint): Promise<void> => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-
+ 
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -1312,21 +1282,21 @@ export const updateProviderLocation = async (location: LocationPoint): Promise<v
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);
-
+ 
   if (error) throw new Error(`Unable to update provider location: ${error.message}`);
 };
-
+ 
 // ─────────────────────────────────────────────────────────────────────────────
 // PRICING SETTINGS — Add these two functions to the BOTTOM of supabaseData.ts
 // right after the existing getPricingSettings function
 // ─────────────────────────────────────────────────────────────────────────────
-
+ 
 export const updatePricingSettings = async (
   settings: PricingSettings,
 ): Promise<PricingSettings> => {
   // Get the current admin user
   const authUser = await getAuthUserOrThrow();
-
+ 
   // Check there is an existing row to update
   const { data: existing, error: fetchError } = await supabase
     .from("pricing_settings")
@@ -1334,11 +1304,11 @@ export const updatePricingSettings = async (
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-
+ 
   if (fetchError) {
     throw new Error(`Unable to fetch pricing settings: ${fetchError.message}`);
   }
-
+ 
   const payload = {
     tow_base_rate:              settings.towBaseRate,
     tow_rate_per_km:            settings.towRatePerKm,
@@ -1352,9 +1322,9 @@ export const updatePricingSettings = async (
     updated_by:                 authUser.id,
     updated_at:                 new Date().toISOString(),
   };
-
+ 
   let result;
-
+ 
   if (existing?.id) {
     // Update the existing row
     const { data, error } = await supabase
@@ -1363,7 +1333,7 @@ export const updatePricingSettings = async (
       .eq("id", existing.id)
       .select("*")
       .single();
-
+ 
     if (error) throw new Error(`Unable to update pricing settings: ${error.message}`);
     result = data;
   } else {
@@ -1373,14 +1343,14 @@ export const updatePricingSettings = async (
       .insert(payload)
       .select("*")
       .single();
-
+ 
     if (error) throw new Error(`Unable to create pricing settings: ${error.message}`);
     result = data;
   }
-
+ 
   // Map the saved row back to PricingSettings shape
   const record = isRecord(result) ? result : {};
-
+ 
   return {
     towBaseRate:              asNumber(record.tow_base_rate, 2500),
     towRatePerKm:             asNumber(record.tow_rate_per_km, 300),
@@ -1393,15 +1363,15 @@ export const updatePricingSettings = async (
     mechanicCommissionPercent: asNumber(record.mechanic_commission_percent, 15),
   } as PricingSettings;
 };
-
+ 
 // ─────────────────────────────────────────────────────────────────────────────
 // ADMIN ONLINE STATUS
 // Call this right after admin logs in to force is_online = true
 // ─────────────────────────────────────────────────────────────────────────────
-
+ 
 export const setAdminOnline = async (): Promise<void> => {
   const authUser = await getAuthUserOrThrow();
-
+ 
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -1409,10 +1379,10 @@ export const setAdminOnline = async (): Promise<void> => {
       updated_at: new Date().toISOString(),
     })
     .eq("id", authUser.id);
-
+ 
   if (error) throw new Error(`Unable to set admin online: ${error.message}`);
 };
-
+ 
 export const setUserOnlineStatus = async (
   userId: string,
   isOnline: boolean,

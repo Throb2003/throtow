@@ -537,36 +537,37 @@ function PaymentPromptPopup({
   const [paying, setPaying] = useState(false);
   const [payFeedback, setPayFeedback] = useState<{ ok: boolean; msg: string } | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash'>('mpesa');
-  // Listen for service_requests that just became "completed" for this customer
-  useEffect(() => {
+
+  // ── Helper: check for completed unpaid requests ─────────────────────────
+  const checkForCompletedJobs = useCallback(async () => {
     if (!customerId) return;
+    const { data } = await supabase
+      .from('service_requests')
+      .select('id, status, payment_status, price, amount, estimated_price, service_type')
+      .eq('customer_id', customerId)
+      .eq('status', 'completed')
+      .not('payment_status', 'in', '("paid","success","cancelled")')
+      .order('updated_at', { ascending: false })
+      .limit(1);
 
-    // ─── Helper: poll for any completed+unpaid requests ───────────────────────
-    const checkForPendingPayment = async () => {
-      const { data } = await supabase
-        .from('service_requests')
-        .select('id, status, payment_status, price, amount, estimated_price, service_type')
-        .eq('customer_id', customerId)
-        .eq('status', 'completed')
-        .not('payment_status', 'in', '("paid","success","cancelled")')
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!data) return;
-      const row = data as Record<string, unknown>;
+    if (data && data.length > 0) {
+      const row = data[0] as Record<string, unknown>;
       const amount = Number(row.price ?? row.amount ?? row.estimated_price ?? 0);
       const serviceType = typeof row.service_type === 'string' ? row.service_type : 'Service';
       const requestId = typeof row.id === 'string' ? row.id : '';
-      if (requestId) {
-        setPendingPayment((prev) =>
-          prev?.requestId === requestId ? prev : { requestId, serviceType, amount }
-        );
+      // Only show if not already showing this one
+      setPendingPayment((prev) => {
+        if (prev?.requestId === requestId) return prev;
         setPayFeedback(null);
-      }
-    };
+        return { requestId, serviceType, amount };
+      });
+    }
+  }, [customerId]);
 
-    // ─── Realtime channel (fires instantly when driver marks complete) ─────────
+  // ── Realtime listener ───────────────────────────────────────────────────
+  useEffect(() => {
+    if (!customerId) return;
+
     const channel = supabase
       .channel(`payment-prompt:${customerId}`)
       .on(
@@ -581,40 +582,29 @@ function PaymentPromptPopup({
           const row = payload.new as Record<string, unknown>;
           const status = typeof row.status === 'string' ? row.status : '';
           const payStatus = typeof row.payment_status === 'string' ? row.payment_status : '';
-          // Only pop up when just completed and not yet paid
           if (status === 'completed' && !['paid', 'success', 'cancelled'].includes(payStatus)) {
             const amount = Number(row.price ?? row.amount ?? row.estimated_price ?? 0);
             const serviceType = typeof row.service_type === 'string' ? row.service_type : 'Service';
             const requestId = typeof row.id === 'string' ? row.id : '';
-            if (requestId) {
-              setPendingPayment((prev) =>
-                prev?.requestId === requestId ? prev : { requestId, serviceType, amount }
-              );
-              setPayFeedback(null);
-            }
+            setPendingPayment({ requestId, serviceType, amount });
+            setPayFeedback(null);
           }
         },
       )
       .subscribe();
 
-    // ─── Polling fallback — every 15 s and on tab focus ───────────────────────
-    // This ensures the popup appears even if Realtime misses the event
-    // (common when REPLICA IDENTITY FULL is not set on the table).
-    void checkForPendingPayment();
-    const pollInterval = setInterval(() => { void checkForPendingPayment(); }, 15_000);
-
-    const handleFocus = () => { void checkForPendingPayment(); };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) void checkForPendingPayment();
-    });
-
-    return () => {
-      void supabase.removeChannel(channel);
-      clearInterval(pollInterval);
-      window.removeEventListener('focus', handleFocus);
-    };
+    return () => { void supabase.removeChannel(channel); };
   }, [customerId]);
+
+  // ── Polling fallback — checks every 8 seconds in case realtime misses it ─
+  useEffect(() => {
+    if (!customerId) return;
+    // Check immediately on mount
+    void checkForCompletedJobs();
+    // Then poll every 8 seconds
+    const interval = setInterval(() => void checkForCompletedJobs(), 8000);
+    return () => clearInterval(interval);
+  }, [customerId, checkForCompletedJobs]);
 
   const handlePay = async () => {
     if (!pendingPayment) return;
