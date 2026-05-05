@@ -1,0 +1,119 @@
+
+> my-app@0.0.0 lint
+> eslint .
+
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\badge.tsx
+  46:17  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\button-group.tsx
+  82:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\button.tsx
+  62:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\form.tsx
+  159:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\navigation-menu.tsx
+  167:3  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\sidebar.tsx
+  611:26  error  Error: Cannot call impure function during render
+
+`Math.random` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\sidebar.tsx:611:26
+  609 |   // Random width between 50 to 90%.
+  610 |   const width = React.useMemo(() => {
+> 611 |     return `${Math.floor(Math.random() * 40) + 50}%`
+      |                          ^^^^^^^^^^^^^ Cannot call impure function
+  612 |   }, [])
+  613 |
+  614 |   return (  react-hooks/purity
+  725:3   error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\components\ui\toggle.tsx
+  45:18  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\contexts\AuthContext.tsx
+  124:10  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\contexts\AuthContext.tsx:124:10
+  122 |
+  123 |   useEffect(() => {
+> 124 |     void loadCurrentUser();
+      |          ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  125 |
+  126 |     const {
+  127 |       data: { subscription },  react-hooks/set-state-in-effect
+  276:5   warning  React Hook useMemo has a missing dependency: 'register'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+  282:17  error    Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-refresh/only-export-components
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\pages\dashboards\AdminDashboard.tsx
+   253:6   warning  React Hook useCallback was passed a dependency list that is not an array literal. This means we can't statically verify whether you've passed the correct dependencies                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/exhaustive-deps
+   253:6   warning  React Hook useCallback has a missing dependency: 'loader'. Either include it or remove the dependency array. If 'loader' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+   588:9   warning  The 'requests' logical expression could make the dependencies of useMemo Hook (at line 596) change on every render. To fix this, wrap the initialization of 'requests' in its own useMemo() Hook                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+   851:34  error    Compilation Skipped: Existing memoization could not be preserved
+
+React Compiler has skipped optimizing this component because the existing manual memoization could not be preserved. The inferred dependencies did not match the manually specified dependencies, which could cause the value to change more or less frequently than expected. The inferred dependency was `data.analytics`, but the source dependencies were [data?.analytics]. Inferred different dependency than source.
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\pages\dashboards\AdminDashboard.tsx:851:34
+  849 |   );
+  850 |
+> 851 |   const numericEntries = useMemo(() => {
+      |                                  ^^^^^^^
+> 852 |     if (!data?.analytics) {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 853 |       return [];
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 854 |     }
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 855 |
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 856 |     return Object.entries(data.analytics).filter(
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 857 |       ([, value]) => typeof value === "number"
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 858 |     ) as Array<[string, number]>;
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 859 |   }, [data?.analytics]);
+      | ^^^^ Could not preserve existing manual memoization
+  860 |
+  861 |   const requestStatusBreakdown = useMemo(
+  862 |     () =>  react-hooks/preserve-manual-memoization
+   981:7   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\pages\dashboards\AdminDashboard.tsx:981:7
+  979 |   useEffect(() => {
+  980 |     if (data) {
+> 981 |       setDraft(data);
+      |       ^^^^^^^^ Avoid calling setState() directly within an effect
+  982 |     }
+  983 |   }, [data]);
+  984 |                                                                                                                                                                                                                                                                                                                                                                                 react-hooks/set-state-in-effect
+  1049:39  error    Redundant Boolean call                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         no-extra-boolean-cast
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\pages\dashboards\CustomerDashboard.tsx
+  943:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\EVANS KHASAVULI\OneDrive\Desktop\tHROTOW\app\src\pages\dashboards\DriverDashboard.tsx
+  243:6  warning  React Hook useEffect has a missing dependency: 'job'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  433:6  warning  React Hook useEffect has a missing dependency: 'job'. Either include it or remove the dependency array          react-hooks/exhaustive-deps
+  742:6  warning  React Hook useEffect has a missing dependency: 'customerLoc'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 21 problems (14 errors, 7 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

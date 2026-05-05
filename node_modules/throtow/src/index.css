@@ -1,0 +1,293 @@
+@import 'leaflet/dist/leaflet.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 4.7%;
+    --foreground: 0 0% 96.5%;
+    --card: 0 0% 4.7%;
+    --card-foreground: 0 0% 96.5%;
+    --popover: 0 0% 4.7%;
+    --popover-foreground: 0 0% 96.5%;
+    --primary: 0 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 96.5%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 72%;
+    --accent: 0 100% 59%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 100% 59%;
+    --radius: 0.875rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-[#0B0B0D] text-[#F6F6F6] antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', sans-serif;
+  }
+}
+
+@layer components {
+  .font-display {
+    font-family: 'Sora', sans-serif;
+  }
+  
+  .font-mono-label {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, #FF2D2D 0%, #FF6B6B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .bg-primary-dark {
+    background-color: #0B0B0D;
+  }
+  
+  .bg-accent-red {
+    background-color: #FF2D2D;
+  }
+  
+  .text-accent-red {
+    color: #FF2D2D;
+  }
+  
+  .border-accent-red {
+    border-color: #FF2D2D;
+  }
+  
+  .card-rounded {
+    border-radius: 22px;
+  }
+  
+  .btn-rounded {
+    border-radius: 14px;
+  }
+  
+  .chip-rounded {
+    border-radius: 999px;
+  }
+  
+  .speed-lines {
+    background: repeating-linear-gradient(
+      75deg,
+      transparent,
+      transparent 20px,
+      rgba(255, 255, 255, 0.08) 20px,
+      rgba(255, 255, 255, 0.08) 21px
+    );
+  }
+  
+  .grain-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+  
+  .diagonal-panel {
+    clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+  }
+  
+  .image-grade {
+    filter: contrast(1.15) saturate(0.75);
+  }
+  
+  .section-pinned {
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .headline-xl {
+    font-size: clamp(56px, 7vw, 112px);
+    font-weight: 800;
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+  
+  .headline-lg {
+    font-size: clamp(40px, 5vw, 80px);
+    font-weight: 700;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+  
+  .headline-md {
+    font-size: clamp(32px, 4vw, 56px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+  
+  .body-text {
+    font-size: clamp(14px, 1.2vw, 18px);
+    line-height: 1.6;
+    color: #B8B8B8;
+  }
+  
+  .mono-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  
+  .btn-primary-red {
+    @apply bg-[#FF2D2D] text-white font-semibold px-6 py-3 btn-rounded transition-all duration-300;
+  }
+  
+  .btn-primary-red:hover {
+    @apply bg-[#E62929] transform -translate-y-0.5;
+    box-shadow: 0 10px 30px rgba(255, 45, 45, 0.3);
+  }
+  
+  .btn-outline-white {
+    @apply border-2 border-white/30 text-white font-semibold px-6 py-3 btn-rounded transition-all duration-300 bg-transparent;
+  }
+  
+  .btn-outline-white:hover {
+    @apply border-white bg-white/10;
+  }
+  
+  .collage-card {
+    @apply card-rounded overflow-hidden relative;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+  }
+  
+  .collage-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0) 50%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+  .red-panel {
+    @apply bg-[#FF2D2D] text-white font-bold px-4 py-2;
+    clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+  }
+  
+  .service-chip {
+    @apply bg-white/10 text-white px-4 py-2 chip-rounded text-sm font-medium border border-white/20 transition-all duration-300;
+  }
+  
+  .service-chip:hover {
+    @apply bg-[#FF2D2D] border-[#FF2D2D];
+  }
+  
+  .price-card {
+    @apply bg-white/5 border border-white/10 card-rounded p-4 transition-all duration-300;
+  }
+  
+  .price-card:hover {
+    @apply bg-white/10 border-[#FF2D2D]/50;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0B0D;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #FF2D2D;
+}
+
+/* Animation utilities */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 45, 45, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 15px rgba(255, 45, 45, 0);
+  }
+}
+
+.animate-pulse-red {
+  animation: pulse-red 2s infinite;
+}
