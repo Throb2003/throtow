@@ -1,7 +1,7 @@
 {
-  "outputDirectory": "app/dist",
-  "installCommand": "npm install --prefix app",
-  "buildCommand": "npm run build --prefix app",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "buildCommand": "npm run build",
   "framework": "vite",
   "rewrites": [
     {
